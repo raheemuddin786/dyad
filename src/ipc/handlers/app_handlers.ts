@@ -95,7 +95,7 @@ async function executeAppLocalNode({
   event: Electron.IpcMainInvokeEvent;
 }): Promise<void> {
   const process = spawn(
-    "(pnpm install && pnpm run dev --port 32100) || (npm install --legacy-peer-deps && npm run dev -- --port 32100)",
+    "(pnpm install && pnpm run dev --port 62100) || (npm install --legacy-peer-deps && npm run dev -- --port 62100)",
     [],
     {
       cwd: appPath,
@@ -443,8 +443,8 @@ export function registerAppHandlers() {
 
         const appPath = getDyadAppPath(app.path);
         try {
-          // Kill any orphaned process on port 32100 (in case previous run left it)
-          await killProcessOnPort(32100);
+          // Kill any orphaned process on port 62100 (in case previous run left it)
+          await killProcessOnPort(62100);
           await executeApp({ appPath, appId, event });
 
           return;
@@ -540,8 +540,8 @@ export function registerAppHandlers() {
             logger.log(`App ${appId} not running. Proceeding to start.`);
           }
 
-          // Kill any orphaned process on port 32100 (in case previous run left it)
-          await killProcessOnPort(32100);
+          // Kill any orphaned process on port 62100 (in case previous run left it)
+          await killProcessOnPort(62100);
 
           // Now start the app again
           const app = await db.query.apps.findFirst({

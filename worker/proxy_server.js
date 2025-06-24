@@ -38,7 +38,7 @@ if (isMainThread) {
 /* ──────────────────────────── worker code ─────────────────────────────── */
 
 const LISTEN_PORT = process.env.LISTEN_PORT || workerData.port;
-let rememberedOrigin = null; // e.g. "http://localhost:5173"
+let rememberedOrigin = null; // e.g. "http://localhost:6173"
 
 /* ---------- pre-configure rememberedOrigin from env or workerData ------- */
 {

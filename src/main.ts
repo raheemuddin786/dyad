@@ -11,6 +11,9 @@ import { handleSupabaseOAuthReturn } from "./supabase_admin/supabase_return_hand
 import { handleDyadProReturn } from "./main/pro";
 import { IS_TEST_BUILD } from "./ipc/utils/test_utils";
 
+// Suppress deprecation warnings (specifically for punycode)
+process.removeAllListeners("warning");
+
 log.errorHandler.startCatching();
 log.eventLogger.startLogging();
 log.scope.labelPadding = false;
@@ -115,10 +118,7 @@ const createWindow = () => {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
-      // transparent: true,
     },
-    // backgroundColor: "#00000001",
-    // frame: false,
   });
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
