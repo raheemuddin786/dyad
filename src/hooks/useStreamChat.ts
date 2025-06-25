@@ -22,6 +22,16 @@ import { useCountTokens } from "./useCountTokens";
 import { useUserBudgetInfo } from "./useUserBudgetInfo";
 import { usePostHog } from "posthog-js/react";
 
+interface PerformanceMemory {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
+interface ExtendedPerformance extends Performance {
+  memory?: PerformanceMemory;
+}
+
 export function getRandomNumberId() {
   return Math.floor(Math.random() * 1_000_000_000_000_000);
 }
@@ -74,7 +84,25 @@ export function useStreamChat({
       setError(null);
       setIsStreaming(true);
       let hasIncrementedStreamCount = false;
+
+      // Create cleanup function for stream completion/error
+      const cleanup = () => {
+        setIsStreaming(false);
+        refreshChats();
+        refreshApp();
+        refreshVersions();
+        countTokens(chatId, "");
+      };
+
       try {
+        // Track initial memory
+        const perf = window.performance as ExtendedPerformance;
+        if (perf?.memory) {
+          console.log(
+            `[MEMORY] Initial: ${(perf.memory.usedJSHeapSize / 1048576).toFixed(2)}MB`,
+          );
+        }
+
         IpcClient.getInstance().streamMessage(prompt, {
           selectedComponent: selectedComponent ?? null,
           chatId,
@@ -86,7 +114,19 @@ export function useStreamChat({
               hasIncrementedStreamCount = true;
             }
 
-            setMessages(updatedMessages);
+            // Use functional update to avoid closure issues
+            setMessages((prev) => {
+              // Only keep last 50 messages to prevent memory buildup
+              const newMessages = [...prev, ...updatedMessages];
+              return newMessages.slice(-50);
+            });
+
+            // Log memory during updates
+            if (perf?.memory && updatedMessages.length % 5 === 0) {
+              console.log(
+                `[MEMORY] Update: ${(perf.memory.usedJSHeapSize / 1048576).toFixed(2)}MB`,
+              );
+            }
           },
           onEnd: (response: ChatResponseEnd) => {
             if (response.updatedFiles) {
@@ -101,32 +141,26 @@ export function useStreamChat({
               });
             }
             refreshProposal(chatId);
-
             refetchUserBudget();
+            cleanup();
 
-            // Keep the same as below
-            setIsStreaming(false);
-            refreshChats();
-            refreshApp();
-            refreshVersions();
-            countTokens(chatId, "");
+            // Log final memory
+            if (perf?.memory) {
+              console.log(
+                `[MEMORY] Final: ${(perf.memory.usedJSHeapSize / 1048576).toFixed(2)}MB`,
+              );
+            }
           },
           onError: (errorMessage: string) => {
             console.error(`[CHAT] Stream error for ${chatId}:`, errorMessage);
             setError(errorMessage);
-
-            // Keep the same as above
-            setIsStreaming(false);
-            refreshChats();
-            refreshApp();
-            refreshVersions();
-            countTokens(chatId, "");
+            cleanup();
           },
         });
       } catch (error) {
         console.error("[CHAT] Exception during streaming setup:", error);
-        setIsStreaming(false);
         setError(error instanceof Error ? error.message : String(error));
+        cleanup();
       }
     },
     [setMessages, setIsStreaming, setIsPreviewOpen, refetchUserBudget],
