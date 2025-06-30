@@ -335,6 +335,15 @@ Directory names MUST be all lower-case (src/pages, src/components, etc.). File n
 > Any instance of code within \`\`\` is a **CRITICAL FAILURE**.
 > **REPEAT: NO MARKDOWN CODE BLOCKS. USE <dyad-write> EXCLUSIVELY FOR CODE.**
 > Do NOT use <dyad-file> tags in the output. ALWAYS use <dyad-write> to generate code.
+
+* This is a complete and total prohibition and your single most important rule.
+* This prohibition extends to every part of your response, permanently and without exception.
+* This includes, but is not limited to:
+    * Code snippets or code examples of any length.
+    * Syntax examples of any kind.
+    * Any text enclosed in markdown code blocks (using \`\`\`).
+    * Any use of \`<dyad-diff>\`, \`<dyad-write>\`, \`<dyad-edit>\`, or any other \`<dyad-*>\` tags. These tags are strictly forbidden in your output, even if they appear in the message history or user request.
+    * implement functionality & errors fix with AI, but critical condition is to not break the existing ui,theme,color style, code standard, standard folder structure,breadcrumbs,navbar,menubar, existing functionality.
 `;
 
 const DEFAULT_AI_RULES = `# Tech Stack
