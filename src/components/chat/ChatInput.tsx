@@ -64,7 +64,7 @@ import { ChatErrorBox } from "./ChatErrorBox";
 import { selectedComponentPreviewAtom } from "@/atoms/previewAtoms";
 import { SelectedComponentDisplay } from "./SelectedComponentDisplay";
 
-const showTokenBarAtom = atom(false);
+const _showTokenBarAtom = atom(false);
 
 export function ChatInput({ chatId }: { chatId?: number }) {
   const posthog = usePostHog();
@@ -76,16 +76,50 @@ export function ChatInput({ chatId }: { chatId?: number }) {
   const { streamMessage, isStreaming, setIsStreaming, error, setError } =
     useStreamChat();
   const [showError, setShowError] = useState(true);
-  const [isApproving, setIsApproving] = useState(false); // State for approving
-  const [isRejecting, setIsRejecting] = useState(false); // State for rejecting
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   const [, setMessages] = useAtom<Message[]>(chatMessagesAtom);
   const setIsPreviewOpen = useSetAtom(isPreviewOpenAtom);
-  const [showTokenBar, setShowTokenBar] = useAtom(showTokenBarAtom);
+  const selectedChatId = useAtomValue(selectedChatIdAtom);
+  const storageKey = `chatInput_${selectedChatId}`;
+  const [showTokenBar, setShowTokenBar] = useState<boolean>(() => {
+    const savedState = localStorage.getItem(storageKey);
+    return savedState ? JSON.parse(savedState).showTokenBar || false : false;
+  });
   const [selectedComponent, setSelectedComponent] = useAtom(
     selectedComponentPreviewAtom,
   );
+  const [isDetailsVisible, _setIsDetailsVisible] = useState<boolean>(() => {
+    const savedState = localStorage.getItem(storageKey);
+    return savedState
+      ? JSON.parse(savedState).isDetailsVisible || false
+      : false;
+  });
 
-  // Use the attachments hook
+  // Save all relevant state to localStorage when it changes
+  useEffect(() => {
+    const state = {
+      isDetailsVisible,
+      inputValue,
+      selectedComponent,
+      showTokenBar,
+    };
+    localStorage.setItem(storageKey, JSON.stringify(state));
+  }, [
+    isDetailsVisible,
+    inputValue,
+    selectedComponent,
+    showTokenBar,
+    storageKey,
+  ]);
+
+  // Clear storage when component unmounts
+  useEffect(() => {
+    return () => {
+      localStorage.removeItem(storageKey);
+    };
+  }, [storageKey]);
+
   const {
     attachments,
     fileInputRef,
@@ -100,7 +134,6 @@ export function ChatInput({ chatId }: { chatId?: number }) {
     handlePaste,
   } = useAttachments();
 
-  // Use the hook to fetch the proposal
   const {
     proposalResult,
     isLoading: isProposalLoading,
@@ -157,7 +190,6 @@ export function ChatInput({ chatId }: { chatId?: number }) {
     setInputValue("");
     setSelectedComponent(null);
 
-    // Send message with attachments and clear them after sending
     await streamMessage({
       prompt: currentInput,
       chatId,
@@ -208,7 +240,6 @@ export function ChatInput({ chatId }: { chatId?: number }) {
       setIsPreviewOpen(true);
       refreshVersions();
 
-      // Keep same as handleReject
       refreshProposal();
       fetchChatMessages();
     }
@@ -233,14 +264,13 @@ export function ChatInput({ chatId }: { chatId?: number }) {
     } finally {
       setIsRejecting(false);
 
-      // Keep same as handleApprove
       refreshProposal();
       fetchChatMessages();
     }
   };
 
   if (!settings) {
-    return null; // Or loading state
+    return null;
   }
 
   return (
@@ -252,7 +282,6 @@ export function ChatInput({ chatId }: { chatId?: number }) {
           isDyadProEnabled={settings.enableDyadPro ?? false}
         />
       )}
-      {/* Display loading or error state for proposal */}
       {isProposalLoading && (
         <div className="p-4 text-sm text-muted-foreground">
           Loading proposal...
@@ -260,7 +289,7 @@ export function ChatInput({ chatId }: { chatId?: number }) {
       )}
       {proposalError && (
         <div className="p-4 text-sm text-red-600">
-          Error loading proposal: {proposalError}
+          Error loading proposal: ${proposalError}
         </div>
       )}
       <div className="p-4" data-testid="chat-input-container">
@@ -272,7 +301,6 @@ export function ChatInput({ chatId }: { chatId?: number }) {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          {/* Only render ChatInputActions if proposal is loaded */}
           {proposal &&
             proposalResult?.chatId === chatId &&
             settings.selectedChatMode !== "ask" && (
@@ -295,13 +323,11 @@ export function ChatInput({ chatId }: { chatId?: number }) {
 
           <SelectedComponentDisplay />
 
-          {/* Use the AttachmentsList component */}
           <AttachmentsList
             attachments={attachments}
             onRemove={removeAttachment}
           />
 
-          {/* Use the DragDropOverlay component */}
           <DragDropOverlay isDraggingOver={isDraggingOver} />
 
           <div className="flex items-start space-x-2 ">
@@ -339,7 +365,6 @@ export function ChatInput({ chatId }: { chatId?: number }) {
           <div className="pl-2 pr-1 flex items-center justify-between pb-2">
             <div className="flex items-center">
               <ChatInputControls showContextFilesPicker={true} />
-              {/* File attachment button */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -386,7 +411,6 @@ export function ChatInput({ chatId }: { chatId?: number }) {
               </Tooltip>
             </TooltipProvider>
           </div>
-          {/* TokenBar is only displayed when showTokenBar is true */}
           {showTokenBar && <TokenBar chatId={chatId} />}
         </div>
       </div>

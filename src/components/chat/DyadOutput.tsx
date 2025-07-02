@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ChevronsDownUp,
   ChevronsUpDown,
@@ -9,6 +9,8 @@ import {
 import { useAtomValue } from "jotai";
 import { selectedChatIdAtom } from "@/atoms/chatAtoms";
 import { useStreamChat } from "@/hooks/useStreamChat";
+import { selectedComponentPreviewAtom } from "@/atoms/previewAtoms";
+
 interface DyadOutputProps {
   type: "error" | "warning";
   message?: string;
@@ -20,11 +22,36 @@ export const DyadOutput: React.FC<DyadOutputProps> = ({
   message,
   children,
 }) => {
-  const [isContentVisible, setIsContentVisible] = useState(false);
+  const storageKey = `dyadOutput_${useAtomValue(selectedChatIdAtom)}`;
+
+  // Initialize state from localStorage
+  const [isContentVisible, setIsContentVisible] = useState<boolean>(() => {
+    const savedState = localStorage.getItem(storageKey);
+    return savedState
+      ? JSON.parse(savedState).isContentVisible || false
+      : false;
+  });
+
   const selectedChatId = useAtomValue(selectedChatIdAtom);
   const { streamMessage } = useStreamChat();
+  const selectedComponentPreview = useAtomValue(selectedComponentPreviewAtom);
 
-  // If the type is not warning, it is an error (in case LLM gives a weird "type")
+  // Save state to localStorage when it changes
+  useEffect(() => {
+    const state = {
+      isContentVisible,
+      message,
+    };
+    localStorage.setItem(storageKey, JSON.stringify(state));
+  }, [isContentVisible, message, storageKey]);
+
+  // Clear storage when component unmounts
+  useEffect(() => {
+    return () => {
+      localStorage.removeItem(storageKey);
+    };
+  }, [storageKey]);
+
   const isError = type !== "warning";
   const borderColor = isError ? "border-red-500" : "border-amber-500";
   const iconColor = isError ? "text-red-500" : "text-amber-500";
@@ -39,8 +66,11 @@ export const DyadOutput: React.FC<DyadOutputProps> = ({
     e.stopPropagation();
     if (message && selectedChatId) {
       streamMessage({
-        prompt: `Fix the error: ${message}`,
+        prompt: `Fix the error while preserving current UI state:\n\nError: ${message}\n\nSelected Component: ${
+          selectedComponentPreview?.name || "none"
+        }`,
         chatId: selectedChatId,
+        selectedComponent: selectedComponentPreview,
       });
     }
   };
