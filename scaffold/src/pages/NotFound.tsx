@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom";
+import { useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTheme } from "@/providers/theme-provider";
 import { Button } from "@/components/ui/button";
