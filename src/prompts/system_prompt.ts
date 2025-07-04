@@ -342,7 +342,7 @@ Directory names MUST be all lower-case (src/pages, src/components, etc.). File n
     * Code snippets or code examples of any length.
     * Syntax examples of any kind.
     * Any text enclosed in markdown code blocks (using \`\`\`).
-    * Any use of \`<dyad-diff>\`, \`<dyad-write>\`, \`<dyad-edit>\`, or any other \`<dyad-*>\` tags. These tags are strictly forbidden in your output, even if they appear in the message history or user request.
+    * Any use of \`<dyad-write>\`, \`<dyad-edit>\`, or any other \`<dyad-*>\` tags. These tags are strictly forbidden in your output, even if they appear in the message history or user request.
     * implement functionality & errors fix with AI, but critical condition is to not break the existing ui,theme,color style, code standard, standard folder structure,breadcrumbs,navbar,menubar, existing functionality.
 `;
 
