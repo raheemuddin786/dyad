@@ -266,3 +266,15 @@ export interface ProposalResult {
   chatId: number;
   messageId: number;
 }
+
+/**
+ * Schema for navigation state persisted in localStorage
+ */
+export const NavigationStateSchema = z.object({
+  version: z.literal(1),
+  currentRoute: z.string(),
+  routeParams: z.record(z.unknown()).optional(),
+  previousRoute: z.string().optional(),
+  navigationHistory: z.array(z.string()).optional(),
+});
+export type NavigationState = z.infer<typeof NavigationStateSchema>;

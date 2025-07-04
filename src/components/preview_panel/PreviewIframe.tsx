@@ -50,35 +50,119 @@ interface ErrorBannerProps {
   onAIFix: () => void;
 }
 
+type ErrorType = "MODULE" | "NETWORK" | "HTTP" | "SYNTAX" | "TYPE" | "RUNTIME";
+
+interface ErrorDetails {
+  type: ErrorType;
+  message: string;
+  code: string;
+  tip: string;
+}
+
 const ErrorBanner = ({ error, onDismiss, onAIFix }: ErrorBannerProps) => {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { isStreaming } = useStreamChat();
 
   if (!error) return null;
 
-  const getTruncatedError = () => {
-    const firstLine = error.split("\n")[0];
-    const snippetLength = 200;
-    const snippet = error.substring(0, snippetLength);
-    return firstLine.length < snippet.length
-      ? firstLine
-      : snippet + (snippet.length === snippetLength ? "..." : "");
+  const getErrorDetails = (): ErrorDetails => {
+    const moduleMatch = error.match(/Cannot find module ['"](.+?)['"]/);
+    const networkMatch = error.match(/net::(\w+)/);
+    const statusMatch = error.match(/status code (\d+)/);
+    const syntaxMatch = error.match(/SyntaxError:.+/);
+    const typeMatch = error.match(/TypeError:.+/);
+
+    if (moduleMatch) {
+      return {
+        type: "MODULE",
+        message: `Missing module: ${moduleMatch[1]}`,
+        code: "MODULE_NOT_FOUND",
+        tip: "Check if the package is installed and import path is correct",
+      };
+    }
+
+    if (networkMatch) {
+      return {
+        type: "NETWORK",
+        message: `Network error: ${networkMatch[1]}`,
+        code: networkMatch[1],
+        tip: "Verify your internet connection and API endpoints",
+      };
+    }
+
+    if (statusMatch) {
+      return {
+        type: "HTTP",
+        message: `HTTP error ${statusMatch[1]}`,
+        code: statusMatch[1],
+        tip: "Check if the server is running and accessible",
+      };
+    }
+
+    if (syntaxMatch) {
+      return {
+        type: "SYNTAX",
+        message: syntaxMatch[0],
+        code: "SYNTAX_ERROR",
+        tip: "Check for typos or incorrect syntax in your code",
+      };
+    }
+
+    if (typeMatch) {
+      return {
+        type: "TYPE",
+        message: typeMatch[0],
+        code: "TYPE_ERROR",
+        tip: "Check variable types and function arguments",
+      };
+    }
+
+    return {
+      type: "RUNTIME",
+      message: error.split("\n")[0],
+      code: "UNKNOWN_ERROR",
+      tip: "Check if restarting the app fixes the error",
+    };
+  };
+
+  const { type, message, code, tip } = getErrorDetails();
+
+  const getTypeBadge = () => {
+    const colors: Record<ErrorType, string> = {
+      MODULE: "bg-amber-500 dark:bg-amber-600",
+      NETWORK: "bg-blue-500 dark:bg-blue-600",
+      HTTP: "bg-purple-500 dark:bg-purple-600",
+      SYNTAX: "bg-red-500 dark:bg-red-600",
+      TYPE: "bg-pink-500 dark:bg-pink-600",
+      RUNTIME: "bg-gray-500 dark:bg-gray-600",
+    };
+
+    return (
+      <span
+        className={`${colors[type]} text-white text-xs px-2 py-1 rounded-md mr-2`}
+      >
+        {type} {code && `(${code})`}
+      </span>
+    );
   };
 
   return (
     <div className="absolute top-2 left-2 right-2 z-10 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md shadow-sm p-2">
       <div className="flex justify-between items-start">
-        <div
-          className="text-red-700 dark:text-red-300 text-wrap font-mono whitespace-pre-wrap break-words text-xs cursor-pointer flex gap-1 items-start"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-        >
-          <ChevronRight
-            size={14}
-            className={`mt-0.5 transform transition-transform ${
-              isCollapsed ? "" : "rotate-90"
-            }`}
-          />
-          {isCollapsed ? getTruncatedError() : error}
+        <div className="flex items-start">
+          {getTypeBadge()}
+          <div
+            className="text-red-700 dark:text-red-300 text-wrap font-mono whitespace-pre-wrap break-words text-xs cursor-pointer flex gap-1 items-start"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+          >
+            <ChevronRight
+              size={14}
+              className={`mt-0.5 transform transition-transform ${
+                isCollapsed ? "" : "rotate-90"
+              }`}
+            />
+            {isCollapsed ? message : error}
+          </div>
         </div>
         <button onClick={onDismiss} className="p-1">
           <X size={16} className="text-red-500 dark:text-red-400" />
@@ -89,8 +173,8 @@ const ErrorBanner = ({ error, onDismiss, onAIFix }: ErrorBannerProps) => {
         <div className="p-2 bg-red-100 dark:bg-red-900 rounded-sm flex gap-1 items-center">
           <Lightbulb size={16} className="text-red-800 dark:text-red-300" />
           <span className="text-sm text-red-700 dark:text-red-200">
-            <span className="font-medium">Tip: </span>Check if restarting the
-            app fixes the error.
+            <span className="font-medium">Tip: </span>
+            {tip}
           </span>
         </div>
       </div>
@@ -218,6 +302,10 @@ export const PreviewIframe = ({ loading }: { loading: boolean }) => {
   // Message handling
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      console.log(
+        `Received message from event: ${event.data.type}`,
+        event.data,
+      );
       if (event.source !== iframeRef.current?.contentWindow) return;
 
       const { type, payload } = event.data as {
@@ -227,15 +315,18 @@ export const PreviewIframe = ({ loading }: { loading: boolean }) => {
 
       if (type === "dyad-component-selector-initialized") {
         setIsComponentSelectorInitialized(true);
-      } else if (type === "dyad-component-selected") {
+      } else if (type === "dyad-component-selected" || type === "app:output") {
         setSelectedComponentPreview(parseComponentSelection(event.data));
         setIsPicking(false);
       } else if (
         type === "window-error" ||
         type === "unhandled-rejection" ||
-        type === "iframe-sourcemapped-error"
+        type === "iframe-sourcemapped-error" ||
+        type === "build-error-report" ||
+        (type === "app:output" && payload?.type === "stderr")
       ) {
         const errorMessage = `Error ${payload?.message || payload?.reason}\n${payload?.stack}`;
+        handleError(payload?.message || payload?.reason || payload);
         setErrorMessage(errorMessage);
         setAppOutput((prev) => [
           ...prev,
@@ -300,6 +391,21 @@ export const PreviewIframe = ({ loading }: { loading: boolean }) => {
         "*",
       );
     }
+  };
+
+  const handleError = (error: string) => {
+    if (!error) return;
+    const formattedError = error.includes("\n") ? error : `Error: ${error}`;
+    setErrorMessage(formattedError);
+    setAppOutput((prev) => [
+      ...prev,
+      {
+        message: formattedError,
+        type: "client-error",
+        appId: selectedAppId!,
+        timestamp: Date.now(),
+      },
+    ]);
   };
 
   // Navigation handlers

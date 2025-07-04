@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { NavigationStateSchema } from "../lib/schemas";
+
 interface ComponentRegistry {
   originalProps: Record<string, unknown>;
   styleHashes: string[];
@@ -23,11 +26,7 @@ interface UIRegistry {
   position: DOMRectReadOnly;
 }
 
-interface NavigationState {
-  path: string;
-  breadcrumbs: string[];
-  menuState: Record<string, boolean>;
-}
+type NavigationState = z.infer<typeof NavigationStateSchema>;
 
 type Registry = Record<string, ComponentRegistry>;
 type DatabaseSnapshots = DatabaseSnapshot[];
@@ -38,7 +37,6 @@ const uiStateKey = "ui_state";
 const navStateKey = "nav_state";
 
 export const store = {
-  // Existing component methods
   registerComponent(name: string, data: ComponentRegistry) {
     componentRegistry[name] = data;
   },
@@ -51,7 +49,6 @@ export const store = {
     return componentRegistry[name];
   },
 
-  // Database methods
   addDatabaseSnapshot(snapshot: DatabaseSnapshot) {
     const snapshots = this.getDatabaseSnapshots();
     snapshots.push(snapshot);
@@ -62,7 +59,6 @@ export const store = {
     return JSON.parse(localStorage.getItem(dbSnapshotsKey) || "[]");
   },
 
-  // New UI preservation methods
   registerUISnapshot(componentId: string, data: UIRegistry) {
     const uiState = JSON.parse(localStorage.getItem(uiStateKey) || "{}");
     uiState[componentId] = data;
@@ -71,6 +67,33 @@ export const store = {
 
   registerNavigationState(state: NavigationState) {
     localStorage.setItem(navStateKey, JSON.stringify(state));
+  },
+
+  getNavigationState(): NavigationState | null {
+    const stored = localStorage.getItem(navStateKey);
+    if (!stored) return null;
+
+    try {
+      const parsed = JSON.parse(stored);
+
+      // Version migration for legacy state
+      if (!parsed.version) {
+        const migrated = {
+          version: 1 as const, // Match schema's literal type
+          currentRoute: parsed.path,
+          routeParams: {},
+          navigationHistory: parsed.breadcrumbs,
+        };
+        localStorage.setItem(navStateKey, JSON.stringify(migrated));
+        return migrated;
+      }
+
+      return NavigationStateSchema.parse(parsed);
+    } catch (error) {
+      console.error("Failed to parse navigation state:", error);
+      localStorage.removeItem(navStateKey);
+      return null;
+    }
   },
 
   verifyComponentChanges(name: string, newProps: Record<string, unknown>) {

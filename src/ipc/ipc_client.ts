@@ -35,6 +35,11 @@ import type {
   App,
   ComponentSelection,
   AppUpgrade,
+  ReadFileParams,
+  ReadFileResult,
+  WriteFileParams,
+  WriteFileResult,
+  DeleteFileParams,
 } from "./ipc_types";
 import type { AppChatContext, ProposalResult } from "@/lib/schemas";
 import { showError } from "@/lib/toast";
@@ -163,6 +168,59 @@ export class IpcClient {
     return IpcClient.instance;
   }
 
+  /**
+   * Reads file contents via IPC
+   * @param params File path and encoding parameters
+   * @returns Promise resolving to file contents or rejecting with error
+   * @throws {Error} When file operation fails or IPC error occurs
+   */
+  public async readFile(params: ReadFileParams): Promise<ReadFileResult> {
+    try {
+      const result = await this.ipcRenderer.invoke("file:read", params);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      return result;
+    } catch (err) {
+      showError(err);
+      throw err;
+    }
+  }
+
+  public async writeFile(params: WriteFileParams): Promise<WriteFileResult> {
+    try {
+      const result = await this.ipcRenderer.invoke("file:write", params);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      return result;
+    } catch (err) {
+      showError(err);
+      throw err;
+    }
+  }
+
+  public async deleteFile(params: DeleteFileParams): Promise<void> {
+    try {
+      const result = await this.ipcRenderer.invoke("file:delete", params);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      showError(err);
+      throw err;
+    }
+  }
+
+  public async getSystemInfo(): Promise<NodeSystemInfo> {
+    try {
+      return await this.ipcRenderer.invoke("system:info");
+    } catch (err) {
+      showError(err);
+      throw err;
+    }
+  }
+
   public async reloadEnvPath(): Promise<void> {
     await this.ipcRenderer.invoke("reload-env-path");
   }
@@ -227,7 +285,7 @@ export class IpcClient {
     prompt: string,
     options: {
       selectedComponent: ComponentSelection | null;
-      chatId: number;
+      chatId: string;
       redo?: boolean;
       attachments?: File[];
       onUpdate: (messages: Message[]) => void;

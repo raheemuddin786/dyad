@@ -1,242 +1,132 @@
-import { z } from "zod";
+export interface FileOperationError {
+  success: false;
+  error: string;
+}
+
+export interface ReadFileResult {
+  success: true;
+  data: string;
+}
+
+export interface WriteFileResult {
+  success: true;
+}
+
+export interface DeleteFileResult {
+  success: true;
+}
+
+export type IpcOperationResult<T = void> =
+  | (T extends void ? WriteFileResult | DeleteFileResult : ReadFileResult)
+  | FileOperationError;
 
 export interface AppOutput {
-  type: "stdout" | "stderr" | "info" | "client-error";
+  type: string;
   message: string;
-  timestamp: number;
   appId: number;
-}
-
-export interface ListAppsResponse {
-  apps: App[];
-  appBasePath: string;
-}
-
-export interface ChatStreamParams {
-  chatId: number;
-  prompt: string;
-  redo?: boolean;
-  attachments?: Array<{
-    name: string;
-    type: string;
-    data: string; // Base64 encoded file data
-  }>;
-  selectedComponent: ComponentSelection | null;
-}
-
-export interface ChatResponseEnd {
-  chatId: number;
-  updatedFiles: boolean;
-  extraFiles?: string[];
-  extraFilesError?: string;
-}
-
-export interface CreateAppParams {
-  name: string;
-}
-
-export interface CreateAppResult {
-  app: {
-    id: number;
-    name: string;
-    path: string;
-    createdAt: string;
-    updatedAt: string;
-  };
-  chatId: number;
-}
-
-export interface Message {
-  id: number;
-  role: "user" | "assistant";
-  content: string;
-  approvalState?: "approved" | "rejected" | null;
-  commitHash?: string | null;
+  timestamp: number;
 }
 
 export interface Chat {
-  id: number;
+  id: string;
   title: string;
-  messages: Message[];
-  initialCommitHash?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface App {
-  id: number;
-  name: string;
-  path: string;
-  files: string[];
-  createdAt: Date;
-  updatedAt: Date;
-  githubOrg: string | null;
-  githubRepo: string | null;
-  githubBranch: string | null;
-  supabaseProjectId: string | null;
-  supabaseProjectName: string | null;
+export interface ChatsResponse {
+  chats: Chat[];
 }
 
-export interface Version {
-  oid: string;
-  message: string;
-  timestamp: number;
+export interface ChatResponseEnd {
+  chatId: string;
 }
 
-export type BranchResult = { branch: string };
-
-export interface SandboxConfig {
-  files: Record<string, string>;
-  dependencies: Record<string, string>;
-  entry: string;
+export interface UserSettings {
+  theme: string;
+  locale: string;
+  autoUpdate: boolean;
+  analyticsEnabled: boolean;
 }
 
-export interface NodeSystemInfo {
-  nodeVersion: string | null;
-  pnpmVersion: string | null;
-  nodeDownloadUrl: string;
-}
-
-export interface SystemDebugInfo {
-  nodeVersion: string | null;
-  pnpmVersion: string | null;
-  nodePath: string | null;
-  telemetryId: string;
-  telemetryConsent: string;
-  telemetryUrl: string;
-  dyadVersion: string;
-  platform: string;
-  architecture: string;
-  logs: string;
-  selectedLanguageModel: string;
-}
-
-export interface LocalModel {
-  provider: "ollama" | "lmstudio";
-  modelName: string; // Name used for API calls (e.g., "llama2:latest")
-  displayName: string; // User-friendly name (e.g., "Llama 2")
-}
-
-export type LocalModelListResponse = {
-  models: LocalModel[];
-};
-
-export interface TokenCountParams {
-  chatId: number;
-  input: string;
-}
-
-export interface TokenCountResult {
-  totalTokens: number;
-  messageHistoryTokens: number;
-  codebaseTokens: number;
-  inputTokens: number;
-  systemPromptTokens: number;
-  contextWindow: number;
-}
-
-export interface ChatLogsData {
-  debugInfo: SystemDebugInfo;
-  chat: Chat;
-  codebase: string;
-}
-
-export interface LanguageModelProvider {
-  id: string;
-  name: string;
-  hasFreeTier?: boolean;
-  websiteUrl?: string;
-  gatewayPrefix?: string;
-  envVarName?: string;
-  apiBaseUrl?: string;
-  type: "custom" | "local" | "cloud";
-}
-
-export type LanguageModel =
-  | {
-      id: number;
-      apiName: string;
-      displayName: string;
-      description: string;
-      tag?: string;
-      maxOutputTokens?: number;
-      contextWindow?: number;
-      type: "custom";
-    }
-  | {
-      apiName: string;
-      displayName: string;
-      description: string;
-      tag?: string;
-      maxOutputTokens?: number;
-      contextWindow?: number;
-      type: "local" | "cloud";
-    };
-
-export interface CreateCustomLanguageModelProviderParams {
-  id: string;
-  name: string;
-  apiBaseUrl: string;
-  envVarName?: string;
-}
-
-export interface CreateCustomLanguageModelParams {
-  apiName: string;
-  displayName: string;
-  providerId: string;
-  description?: string;
-  maxOutputTokens?: number;
-  contextWindow?: number;
-}
-
-export interface DoesReleaseNoteExistParams {
+export interface SystemPlatformInfo {
+  platform: "win32" | "darwin" | "linux";
+  arch: string;
   version: string;
+  memory: number;
 }
 
-export interface ApproveProposalResult {
-  extraFiles?: string[];
-  extraFilesError?: string;
+export interface ListAppsResponse {
+  apps: {
+    id: string;
+    name: string;
+    version: string;
+    status: "running" | "stopped";
+  }[];
 }
 
-export interface ImportAppParams {
-  path: string;
-  appName: string;
+export interface CreateAppParams {}
+export interface CreateAppResult {}
+export interface Message {}
+export interface Version {}
+export interface NodeSystemInfo {
+  platform: string;
+  arch: string;
+  release: string;
+  totalMemory: number;
+  freeMemory: number;
+  cpus: {
+    model: string;
+    speed: number;
+    times: {
+      user: number;
+      nice: number;
+      sys: number;
+      idle: number;
+      irq: number;
+    };
+  }[];
 }
 
-export interface CopyAppParams {
-  appId: number;
-  newAppName: string;
-  withHistory: boolean;
+export interface SystemDebugInfo {}
+export interface LocalModel {}
+export interface TokenCountParams {}
+export interface TokenCountResult {}
+export interface ChatLogsData {}
+export interface BranchResult {}
+export interface LanguageModelProvider {}
+export interface LanguageModel {}
+export interface CreateCustomLanguageModelProviderParams {}
+export interface CreateCustomLanguageModelParams {}
+export interface DoesReleaseNoteExistParams {}
+export interface ApproveProposalResult {}
+export interface ImportAppResult {}
+export interface ImportAppParams {}
+export interface RenameBranchParams {}
+export interface UserBudgetInfo {
+  usedCredits: number;
+  totalCredits: number;
+  budgetResetDate: Date;
 }
+export interface CopyAppParams {}
+export interface App {}
+export interface ComponentSelection {}
+export interface AppUpgrade {}
+export interface ReadFileParams {}
+export interface WriteFileParams {}
+export interface DeleteFileParams {}
 
-export interface ImportAppResult {
-  appId: number;
-  chatId: number;
-}
-
-export interface RenameBranchParams {
-  appId: number;
-  oldBranchName: string;
-  newBranchName: string;
-}
-
-export const UserBudgetInfoSchema = z.object({
-  usedCredits: z.number(),
-  totalCredits: z.number(),
-  budgetResetDate: z.date(),
-});
-export type UserBudgetInfo = z.infer<typeof UserBudgetInfoSchema>;
-
-export interface ComponentSelection {
-  id: string;
-  name: string;
-  relativePath: string;
-  lineNumber: number;
-  columnNumber: number;
-}
-
-export interface AppUpgrade {
-  id: string;
-  title: string;
-  description: string;
-  manualUpgradeUrl: string;
-  isNeeded: boolean;
-}
+export const UserBudgetInfoSchema = {
+  parse: (input: {
+    usedCredits: number;
+    totalCredits: number;
+    budgetResetDate: Date | string;
+  }) => ({
+    usedCredits: input.usedCredits,
+    totalCredits: input.totalCredits,
+    budgetResetDate:
+      input.budgetResetDate instanceof Date
+        ? input.budgetResetDate
+        : new Date(input.budgetResetDate),
+  }),
+};
