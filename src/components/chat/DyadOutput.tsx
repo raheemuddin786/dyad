@@ -76,13 +76,21 @@ export const DyadOutput: React.FC<DyadOutputProps> = ({
       errorType,
     };
     localStorage.setItem(storageKey, JSON.stringify(state));
+    if (message && selectedChatId)
+      streamMessage({
+        prompt: `Understand this error and provide best fix while not disrupting other components:\n\nError: ${formattedMessage}\n\nSelected Component: ${
+          selectedComponentPreview?.name || "none"
+        }`,
+        chatId: selectedChatId,
+        selectedComponent: selectedComponentPreview,
+      });
   }, [isContentVisible, message, errorType, storageKey]);
 
   const handleAIFix = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (message && selectedChatId) {
       streamMessage({
-        prompt: `Fix this ${errorType} while preserving current UI state:\n\nError: ${formattedMessage}\n\nSelected Component: ${
+        prompt: `Understand this error and provide best fix while not disrupting other components:\n\nError: ${formattedMessage}\n\nSelected Component: ${
           selectedComponentPreview?.name || "none"
         }`,
         chatId: selectedChatId,

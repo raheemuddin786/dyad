@@ -337,6 +337,11 @@ export const PreviewIframe = ({ loading }: { loading: boolean }) => {
             timestamp: Date.now(),
           },
         ]);
+        if (
+          type === "build-error-report" ||
+          (type === "app:output" && payload?.type === "stderr")
+        )
+          handleAIFix();
       } else if (type === "pushState" || type === "replaceState") {
         if (payload?.newUrl) {
           const newHistory =
@@ -442,7 +447,7 @@ export const PreviewIframe = ({ loading }: { loading: boolean }) => {
   const handleAIFix = () => {
     if (selectedChatId && errorMessage) {
       streamMessage({
-        prompt: `Fix this error while preserving current UI state:\n\nError: ${errorMessage}\n\nCurrent URL: ${appUrl}\nSelected Component: ${
+        prompt: `Understand the root cause of this error and provide a fix while preserving all other components:\n\nError: ${errorMessage}\n\nCurrent URL: ${appUrl}\nSelected Component: ${
           selectedComponentPreview?.name || "none"
         }`,
         chatId: selectedChatId,
